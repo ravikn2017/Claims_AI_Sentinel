@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "type": "stdio",
+      "command": "/bin/sh",
+      "args": [
+        "-c",
+        "exec npx -y @modelcontextprotocol/server-postgres \"$DATABASE_URL\""
+      ],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    "langfuse": {
+      "url": "https://cloud.langfuse.com/api/public/mcp",
+      "headers": {
+        "Authorization": "Basic ${env:LANGFUSE_BASIC_AUTH}"
+      }
+    },
+    "langfuse-docs": {
+      "url": "https://langfuse.com/api/mcp"
+    }
+  }
+}

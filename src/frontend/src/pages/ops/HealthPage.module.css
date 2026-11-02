@@ -1,0 +1,12 @@
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.list {
+  margin: 0;
+  padding: 16px 16px 16px 32px;
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 8px;
+  background: var(--mui-palette-background-paper);
+}

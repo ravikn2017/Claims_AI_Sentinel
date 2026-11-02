@@ -1,0 +1,31 @@
+---
+description: Missing-info chatbot graph, tools, and payer hand-off
+globs: src/backend/chatbot/**/*.py
+alwaysApply: false
+---
+
+# Missing-info chatbot
+
+Asks about open `claim_issue` rows and posts at most one answer per turn. It never writes `claims.*` and never calls the transitions API.
+
+Graph (`graph/graph_builder.py`): `load` → `propose` → `act` → `followup` only when `submitted` is true.
+
+- **load** reads open issues and the message log. Current issue is the oldest open one.
+- **propose** returns `say`, `action` (`ask` | `submit` | `clarify`), `issue_id`, `value_json`. No invented value. `say` is plain language: no fraud, payment, issue ids, or field paths.
+- **act** calls `POST .../answers` only when `action == "submit"`, the user text is non-empty, and `issue_id` is in the open set. A 422 stays on that issue and is shown to the claimant. Any other action does not call the payer.
+- `conversation_id` is `{submitter_id}:{claim_id}`. The chatbot is the only writer of `chatbot.conversation` and `chatbot.message`.
+- `claim.info_requested` inserts one opening question. A redelivery does not insert a second one.
+- Portal `GET/POST /chat/{claim_id}` proxy here. This service does not accept browser traffic.
+
+```python
+if action != "submit" or issue_id not in open_ids:
+    return {"reply": say, "submitted": False}
+```
+
+# Member inquiry
+
+A second graph in `chatbot/inquiry/`. It does not import `tools/payer.py`, does not post answers, and does not call the transitions API.
+
+- Conversation key is `member_id`, stored in `chatbot.inquiry_conversation` and `chatbot.inquiry_message`.
+- The model may only choose `claims`, `coverage`, `providers`, or `unknown`. Code runs the matching read.
+- Provider answers omit quality ratings. Portal `GET/POST /inquiry` is member-only. The browser does not choose the member id.

@@ -1,0 +1,39 @@
+.panel {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 8px;
+  background: var(--mui-palette-background-paper);
+}
+
+.thread {
+  display: grid;
+  gap: 8px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.assistant,
+.user {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  max-width: 90%;
+}
+
+.assistant {
+  background: var(--mui-palette-action-hover, var(--mui-palette-background-default));
+}
+
+.user {
+  justify-self: end;
+  background: var(--mui-palette-primary-main);
+  color: var(--mui-palette-primary-contrastText);
+}
+
+.composer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}

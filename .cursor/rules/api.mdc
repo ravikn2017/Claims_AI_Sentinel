@@ -1,0 +1,26 @@
+---
+description: HTTP API contract between portal, payer, and agents
+globs: src/backend/**/*.py
+alwaysApply: false
+---
+
+# API pattern
+
+JSON in, JSON out. Request bodies are Pydantic models. Read the actor from headers, not from the body, except where an existing body already carries `submitter_id` (`AnswerBody`, chatbot `TextBody`).
+
+```python
+def actor_from(request: Request) -> dict:
+    return {
+        "actor_type": request.headers.get("x-actor-type", "service"),
+        "actor_id": request.headers.get("x-actor-id", "portal"),
+        "actor_role": request.headers.get("x-actor-role", "service"),
+        "correlation_id": request.headers.get("x-correlation-id"),
+    }
+```
+
+- Payer reads of claim data write `claims.audit_event` in the same transaction and fail if that insert fails.
+- Claim status changes go through `POST /claims/{id}/transitions` with `from_status`, `to_status`, `actor`, `reason_code`, and `idempotency_key`. Callers do not update `claims.claim.status`.
+- Issue answers go through `POST /claims/{id}/issues/{issue_id}/answers` with `value`, `conversation_id`, `claimant_text`, and `submitter_id`. `conversation_id` is `{submitter_id}:{claim_id}`.
+- Portal UI routes proxy staff and claimant calls. The browser never receives another service's base URL.
+- Errors use `HTTPException(detail=...)`. `detail` is a string, or `{"status": "<claim status>"}` when the claim is in the wrong state. Do not add a second error envelope.
+- Documents are a path plus `sha256`. Message bodies do not carry file bytes.

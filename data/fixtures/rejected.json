@@ -1,0 +1,41 @@
+{
+  "submitter_type": "provider",
+  "submitter_id": "PRV-0042",
+  "claim": {
+    "claim_type": "professional",
+    "member": {
+      "member_id": "MBR-100231",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "dob": "1984-03-12"
+    },
+    "group_number": "GRP-7781",
+    "billing_provider": { "npi": "1234567893", "name": "Lakeside Family Clinic" },
+    "rendering_npi": "1987654328",
+    "place_of_service": "11",
+    "service_from": "2020-01-15",
+    "service_to": "2020-01-15",
+    "diagnosis_codes": ["E11.9", "I10"],
+    "lines": [
+      {
+        "line_no": 1,
+        "cpt_code": "99214",
+        "modifiers": [],
+        "units": 1,
+        "billed_amount": "185.00",
+        "service_date": "2020-01-15",
+        "diagnosis_pointers": [1, 2]
+      },
+      {
+        "line_no": 2,
+        "cpt_code": "83036",
+        "modifiers": [],
+        "units": 1,
+        "billed_amount": "45.00",
+        "service_date": "2020-01-15",
+        "diagnosis_pointers": [1]
+      }
+    ],
+    "total_billed": "230.00"
+  }
+}

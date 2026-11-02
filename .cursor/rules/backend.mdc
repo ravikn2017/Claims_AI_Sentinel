@@ -1,0 +1,23 @@
+---
+description: Python service layout and process boundaries
+globs: src/backend/**/*.py
+alwaysApply: false
+---
+
+# Backend services
+
+Python, FastAPI, SQLAlchemy, Pydantic. One process per component under `src/backend/<component>/`.
+
+| Service | Package | Port | Schema it writes |
+|---|---|---|---|
+| Portal | `portal` | 47110 | `portal` |
+| Payer | `payer_service` | 47111 | `claims` |
+| Chatbot | `chatbot` | 47112 | `chatbot` |
+| Adjudicator | `adjudicator` | 47113 | `adjudication` |
+
+- `app.py` or `main.py` owns the FastAPI app, `/health` via `platform_status()`, and background loops started in `lifespan` (publisher, watcher, consumer). Stop them on shutdown.
+- Insert `src/backend` on `sys.path` the same way existing apps do, then import the package.
+- Business rules stay in the payer service (`rules.py`, `repository.py`). The portal checks shape only: schema, file type, size, duplicate `submission_id`.
+- Cross-service calls are HTTP (`httpx`) with `X-Actor-Type`, `X-Actor-Id`, `X-Actor-Role`, and `X-Correlation-ID`. Do not import another service's repository.
+- Queue work: consume, handle, ack after the write succeeds. Retries then dead-letter. A repeat delivery must not create a second row or a second opening question.
+- Map domain errors to HTTP: `FieldRejected` → 422, `Conflict` → 409, missing claim → 404, dependency down → 503.

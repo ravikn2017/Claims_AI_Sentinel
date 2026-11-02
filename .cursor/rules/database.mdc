@@ -1,0 +1,24 @@
+---
+description: Postgres schema ownership and SQL change rules
+globs: db/**/*.sql,src/backend/**/db.py
+alwaysApply: false
+---
+
+# Database
+
+One local Postgres. pgvector is on that instance. No separate vector database.
+
+Schemas and the only writer of each:
+
+- `portal` — portal (`submission_log`, `app_user`, `login_session`)
+- `claims` — payer service (claims, reference data, outbox, audit)
+- `adjudication` — adjudicator (chunks, review tasks, adjudication events, LangGraph checkpoints)
+- `fraud` — fraud agent
+- `chatbot` — chatbot (`conversation`, `message`, `inquiry_conversation`, `inquiry_message`)
+
+- `db/sql/001_schema.sql` recreates schemas. A change to a database that already runs is a new numbered file (`004_chatbot.sql` style): `CREATE … IF NOT EXISTS`, no `DROP SCHEMA`.
+- Tables are `schema.table`. Roles: `claims_owner` owns objects; `payer_app` gets explicit grants in `002_grants.sql`.
+- FKs stay inside the owner schema. Another service does not get `INSERT`/`UPDATE` on `claims.*`.
+- Status, role, and publish-status columns use a `CHECK` constraint.
+- History tables (`claim_status_history`, `claim_amendment`, `document_extraction`, `audit_event`) are insert-only.
+- Engines live in the service `db.py`, use `db_url.py`, and set `pool_pre_ping=True`. Open work with `engine.begin()`.

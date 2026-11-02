@@ -1,0 +1,18 @@
+---
+description: LangGraph agent layout and the propose-then-decide rule
+globs: src/backend/**/{graph,nodes,tools,state,LLMS}/**/*.py
+alwaysApply: false
+---
+
+# Agentic AI
+
+Agents share this layout: `graph/`, `nodes/`, `state/`, `tools/`, `LLMS/`, `app.py`. The chatbot is the reference. The adjudicator, policy, fraud, and medical-necessity agents follow it.
+
+- **AI proposes, code decides.** A node that calls the model returns a structured proposal. The next node, written in code, accepts or rejects it. Tools do not trust the model to choose the side effect.
+- State is a `TypedDict`. The graph is built in `graph_builder.py` and compiled once.
+- Tools call another component over HTTP. They do not import that component's repository or write its schema.
+- Structured output is a Pydantic model (`with_structured_output`). Claimant or document text is data in the prompt, not instructions.
+- Every agent result that the adjudicator routes on uses one shape: `verdict`, `confidence`, `reasons`, `evidence`, `error`, plus `details`. Routing must not depend on agent internals.
+- Confidence under 0.7, timeout, or error goes to a human. Do not auto-deny.
+- Trace with `LLMS/tracing.py` (Langfuse callback, claim id and conversation id as metadata) when the three `LANGFUSE_*` env vars are set. If they are missing, the run still proceeds. Do not write the trace into `audit_event`.
+- Adjudicator waits (reviewer, investigator, claimant) are Postgres checkpoints, not a blocked worker. The chatbot does not use checkpoints; one user message is one run.

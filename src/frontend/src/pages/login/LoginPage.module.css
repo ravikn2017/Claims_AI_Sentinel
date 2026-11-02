@@ -1,0 +1,110 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(280px, 1.1fr) minmax(320px, 1fr);
+  background: var(--mui-palette-background-default);
+  color: var(--mui-palette-text-primary);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 64px;
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--mui-palette-brand-main) 82%, black), var(--mui-palette-brand-main));
+  color: var(--mui-palette-brand-contrastText);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.kicker {
+  margin: 0;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.lede {
+  margin: 0;
+  max-width: 36rem;
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.formSide {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 72px 40px 40px;
+}
+
+.toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: var(--mui-palette-text-primary);
+}
+
+.card {
+  width: min(100%, 420px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 32px;
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 16px;
+  background: var(--mui-palette-background-paper);
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--mui-palette-common-black) 12%, transparent);
+}
+
+.demos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.demo {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--mui-palette-text-primary);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.demo:hover {
+  background: var(--mui-palette-action-hover);
+}
+
+.demoDetail {
+  color: var(--mui-palette-text-secondary);
+}
+
+@media (max-width: 800px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    min-height: 220px;
+    padding: 32px 24px;
+  }
+
+  .formSide {
+    padding: 24px 16px 32px;
+  }
+}

@@ -1,0 +1,18 @@
+---
+description: Cross-cutting invariants for ClaimsAI Sentinel
+alwaysApply: true
+---
+
+# ClaimsAI Sentinel
+
+Local learning build. Synthetic US professional claims (CPT, ICD-10, NPI). No payment, member letters, or notifications. Do not add scaling, auth providers, or a second database.
+
+Design source: `docs/consolidated-design.md`. Follow it; do not invent a new component boundary.
+
+- **One writer of claim data.** Only the payer service writes `claims.*`. Other services call its HTTP API.
+- **AI proposes, code decides.** An LLM output is not a status, verdict, or stored fact until deterministic code checks it.
+- **Humans own adverse decisions.** A failure never auto-denies or auto-clears a claim. Asking for information is never a denial.
+- **Nothing twice.** Events go through an outbox. Use existing idempotency keys (`submission_id`, conversation id, transition key).
+- **Append-only history.** Status changes, amendments, extractions, and audit rows are inserts. Langfuse traces are for debugging, not the audit record.
+- Each service writes only its own Postgres schema: `portal`, `claims`, `adjudication`, `fraud`, `chatbot`.
+- Browser talks only to the portal (47110). Payer is 47111, chatbot is 47112, adjudicator is 47113, Vite is 47117.

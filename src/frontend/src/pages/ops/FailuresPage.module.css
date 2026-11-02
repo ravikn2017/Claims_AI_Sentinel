@@ -1,0 +1,37 @@
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.table {
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 8px;
+  background: var(--mui-palette-background-paper);
+  overflow: auto;
+}
+
+.table th {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mui-palette-text-secondary);
+  background: var(--mui-palette-background-paper);
+  white-space: nowrap;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+.id {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}

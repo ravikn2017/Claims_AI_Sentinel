@@ -1,0 +1,137 @@
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.table {
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 8px;
+  background: var(--mui-palette-background-paper);
+  overflow: auto;
+}
+
+.table th {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mui-palette-text-secondary);
+  background: var(--mui-palette-background-paper);
+  white-space: nowrap;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.identity a {
+  flex: none;
+  white-space: nowrap;
+}
+
+.id {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.chatRow {
+  box-shadow: inset 3px 0 0 var(--mui-palette-warning-main);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rail {
+  width: 160px;
+}
+
+.track {
+  display: flex;
+  align-items: center;
+}
+
+.station {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.station:first-child {
+  flex: 0;
+}
+
+.bar {
+  flex: 1;
+  height: 2px;
+  min-width: 10px;
+  background: var(--mui-palette-divider);
+}
+
+.bar.done,
+.bar.active {
+  background: var(--mui-palette-primary-main);
+}
+
+.bar.error {
+  background: var(--mui-palette-error-main);
+}
+
+.mark,
+.chatMark {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border: 2px solid var(--mui-palette-divider);
+  background: transparent;
+}
+
+.mark {
+  border-radius: 50%;
+}
+
+.chatMark {
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+
+.done {
+  background: var(--mui-palette-primary-main);
+  border-color: var(--mui-palette-primary-main);
+}
+
+.active {
+  background: var(--mui-palette-warning-main);
+  border-color: var(--mui-palette-warning-main);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mui-palette-warning-main) 28%, transparent);
+}
+
+.waiting {
+  background: var(--mui-palette-background-paper);
+}
+
+.skipped {
+  background: transparent;
+  border-style: dashed;
+  opacity: 0.7;
+}
+
+.error {
+  background: var(--mui-palette-error-main);
+  border-color: var(--mui-palette-error-main);
+}
+
+.caption {
+  margin: 6px 0 0;
+  color: var(--mui-palette-text-secondary);
+  white-space: nowrap;
+}

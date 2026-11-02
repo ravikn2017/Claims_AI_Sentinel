@@ -1,0 +1,23 @@
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.lookup {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.item {
+  padding: 12px;
+  border-bottom: 1px solid var(--mui-palette-divider);
+}

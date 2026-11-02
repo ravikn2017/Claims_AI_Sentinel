@@ -1,0 +1,27 @@
+.form {
+  display: grid;
+  gap: 16px;
+}
+
+.presets,
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.grid > * {
+  flex: 1 1 180px;
+}
+
+.line {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 8px;
+}
+
+.file {
+  display: grid;
+  gap: 8px;
+}

@@ -1,0 +1,28 @@
+.stepper {
+  width: 100%;
+  max-width: 240px;
+  min-width: 0;
+  box-sizing: border-box;
+  background: var(--mui-palette-background-paper);
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 8px;
+  padding: 12px 10px 4px;
+}
+
+.stepper :global(.MuiStepLabel-label) {
+  white-space: normal;
+}
+
+.skipped {
+  opacity: 0.55;
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon {
+  flex: none;
+}

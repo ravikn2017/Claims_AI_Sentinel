@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg[binary]
+pydantic
+aio-pika
+python-dotenv
+httpx
+python-multipart
+pypdf
+pytest
+langgraph
+langgraph-checkpoint-postgres
+langchain-openai
+langfuse
+pgvector

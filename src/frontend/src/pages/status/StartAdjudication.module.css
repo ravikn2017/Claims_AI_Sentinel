@@ -1,0 +1,5 @@
+.box {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}

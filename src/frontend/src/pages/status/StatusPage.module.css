@@ -1,0 +1,81 @@
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.lookup,
+.heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  column-gap: 28px;
+  align-items: start;
+}
+
+.stages {
+  min-width: 0;
+  width: 240px;
+  max-width: 240px;
+  justify-self: end;
+  overflow: hidden;
+}
+
+.detail {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.id {
+  font-family: ui-monospace, monospace;
+}
+
+.history {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 8px;
+  background: var(--mui-palette-background-paper);
+  overflow: auto;
+}
+
+.table th {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mui-palette-text-secondary);
+  background: var(--mui-palette-background-paper);
+  white-space: nowrap;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+.table :global(table) {
+  width: max-content;
+  min-width: 100%;
+}
+
+.when {
+  white-space: nowrap;
+}
+
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

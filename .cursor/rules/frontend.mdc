@@ -1,0 +1,25 @@
+---
+description: React portal UI conventions
+globs: src/frontend/**/*.{ts,tsx,css}
+alwaysApply: false
+---
+
+# Frontend
+
+React + Vite + MUI. Pages live in `src/frontend/src/pages/<area>/`. Shared pieces live in `components/`. Styles are CSS modules next to the component.
+
+- Call the portal with `request()` from `src/frontend/src/api.ts`. It sends `Authorization` and `X-Actor-*` from `useSession` / `useActor`. Do not call ports 47111 or 47112 from the browser.
+- POST chat as `{ "text": "..." }` only. The client does not pick `issue_id` or coerce a field value.
+- Gate nav and routes by `Role` (`provider`, `member`, `reviewer`, `investigator`, `ops`). Unknown paths go to `homeFor(role)`.
+- Show failures with `errorText()`. A 401 outside `/auth/` clears the session.
+- Keep claim status display in sync with the payer status the page already polls. Do not invent a client-side status.
+
+```tsx
+const response = await request(`/chat/${encodeURIComponent(claimId)}`, actor, {
+  method: "POST",
+  body: JSON.stringify({ text }),
+});
+if (!response.ok) {
+  setError(errorText(response.data));
+}
+```
