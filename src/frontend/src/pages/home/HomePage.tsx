@@ -18,7 +18,7 @@ const cards: { to: string; title: string; detail: string; icon: typeof NoteAddOu
     title: "Submit a claim",
     detail: "Send a professional claim and follow it from validation onward.",
     icon: NoteAddOutlined,
-    roles: ["provider", "member", "reviewer", "investigator", "ops"],
+    roles: ["provider", "member", "reviewer", "ops"],
   },
   {
     to: "/claims",

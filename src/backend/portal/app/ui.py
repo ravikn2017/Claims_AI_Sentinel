@@ -521,18 +521,25 @@ def list_tasks(request: Request, status: str | None = None, task_type: str | Non
         clauses = ["1 = 1"]
         params: dict = {}
         if status:
-            clauses.append("status = :status")
+            clauses.append("t.status = :status")
             params["status"] = status
         if task_type:
-            clauses.append("task_type = :task_type")
+            clauses.append("t.task_type = :task_type")
             params["task_type"] = task_type
         rows = conn.execute(
             text(
                 f"""
-                SELECT task_id, claim_id, summary, risk_score, status, task_type, assignee, picked_at, created_at
-                FROM adjudication.review_tasks
+                SELECT t.task_id, t.claim_id, t.summary, t.risk_score, t.status, t.task_type,
+                       t.assignee, t.picked_at, t.created_at,
+                       c.member_id, c.total_billed, c.service_from, c.service_to,
+                       trim(both ' ' FROM concat_ws(' ', m.first_name, m.last_name)) AS member_name,
+                       p.name AS provider_name
+                FROM adjudication.review_tasks t
+                LEFT JOIN claims.claim c ON c.claim_id = t.claim_id
+                LEFT JOIN claims.member m ON m.member_id = c.member_id
+                LEFT JOIN claims.provider p ON p.provider_id = c.billing_provider_id
                 WHERE {' AND '.join(clauses)}
-                ORDER BY risk_score DESC NULLS LAST, created_at
+                ORDER BY t.risk_score DESC NULLS LAST, t.created_at
                 """
             ),
             params,
