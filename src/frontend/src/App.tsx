@@ -45,7 +45,7 @@ const everyone: Role[] = ["provider", "member", "reviewer", "investigator", "ops
 
 const links: { to: string; label: string; icon: typeof HomeOutlined; roles: Role[]; end?: boolean }[] = [
   { to: "/", label: "Home", icon: HomeOutlined, roles: everyone, end: true },
-  { to: "/submit", label: "Submit", icon: NoteAddOutlined, roles: ["provider", "member", "reviewer", "ops"] },
+  { to: "/submit", label: "Submit", icon: NoteAddOutlined, roles: ["provider", "member", "ops"] },
   { to: "/claims", label: "Claims", icon: AssignmentOutlined, roles: everyone, end: true },
   { to: "/inquiry", label: "Ask", icon: ChatOutlined, roles: ["member"], end: true },
   { to: "/claims/lookup", label: "Look up", icon: SearchOutlined, roles: staffRoles },
@@ -177,7 +177,7 @@ function Shell() {
           )}
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/submit" element={user.role === "investigator" ? <Navigate to="/" replace /> : <SubmitPage />} />
+            <Route path="/submit" element={user.role === "reviewer" || user.role === "investigator" ? <Navigate to="/" replace /> : <SubmitPage />} />
             <Route path="/claims" element={<ClaimsPage />} />
             <Route path="/inquiry" element={<InquiryPage />} />
             <Route path="/claims/lookup" element={<StatusPage />} />
