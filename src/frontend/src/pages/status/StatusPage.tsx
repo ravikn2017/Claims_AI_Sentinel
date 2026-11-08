@@ -15,6 +15,7 @@ import { ClaimStages, type AdjEvent, type HistoryRow } from "../../components/Cl
 import { StatusChip } from "../../components/StatusChip";
 import { staffRoles, useActor } from "../../session";
 import { ChatPanel } from "./ChatPanel";
+import { CorrectClaim } from "./CorrectClaim";
 import { StartAdjudication } from "./StartAdjudication";
 import styles from "./StatusPage.module.css";
 
@@ -130,6 +131,7 @@ export function StatusPage() {
                 </ul>
               </div>
             )}
+            {claimant && body.status === "PENDING_INFO" && <CorrectClaim submissionId={body.submission_id} />}
             {claimant && body.claim_id && (body.status === "PENDING_INFO" || body.history.some((row) => row.to_status === "PENDING_INFO")) && (
               <ChatPanel claimId={body.claim_id} waiting={body.status === "PENDING_INFO"} />
             )}

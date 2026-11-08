@@ -710,6 +710,106 @@ def answer_issue(
     return {"issue_id": issue_id, "status": "resolved", "claim_status": outcome.status}
 
 
+def _paths(draft: ClaimDraft) -> dict:
+    data = draft.model_dump(mode="json")
+    found: dict = {}
+    for key, value in (data.get("member") or {}).items():
+        found[f"member.{key}"] = value
+    for key, value in (data.get("billing_provider") or {}).items():
+        found[f"billing_provider.{key}"] = value
+    for key in ("group_number", "rendering_npi", "place_of_service", "service_from", "service_to", "total_billed"):
+        found[key] = data.get(key)
+    found["diagnosis_codes"] = data.get("diagnosis_codes") or []
+    for line in data.get("lines") or []:
+        line_no = line["line_no"]
+        for key, value in line.items():
+            if key != "line_no":
+                found[f"lines[{line_no}].{key}"] = value
+    return found
+
+
+def revise_claim(conn: Connection, claim_id: str, updated: ClaimDraft, submitter_id: str, *, today: date | None = None) -> dict:
+    """Replace the working copy while the claim is waiting for information, then revalidate."""
+    claim = _lock_claim(conn, claim_id)
+    if claim["submitter_id"] != submitter_id:
+        raise NotAllowed("Only the submitter can correct this claim")
+    if claim["status"] != "PENDING_INFO":
+        raise Conflict(claim["status"])
+    previous = ClaimDraft.model_validate(claim["draft"])
+    reference = load_reference(conn, exclude_claim_id=claim_id)
+    outcome = validate(
+        updated,
+        reference,
+        exclude_claim_id=claim_id,
+        today=today or date.today(),
+        timely_days=timely_filing_days(),
+    )
+    before = _paths(previous)
+    after = _paths(updated)
+    changed = [path for path in sorted(set(before) | set(after)) if before.get(path) != after.get(path)]
+    if not changed:
+        raise FieldRejected("Change at least one field before saving.")
+    issue_id = conn.execute(
+        text(
+            """
+            INSERT INTO claims.claim_issue (
+                claim_id, field_path, issue_code, severity, message, status, resolved_at
+            )
+            VALUES (
+                :claim_id, 'claim', 'CLAIM_CORRECTION', 'MISSING_INFO',
+                'The submitter corrected the claim.', 'resolved', now()
+            )
+            RETURNING issue_id
+            """
+        ),
+        {"claim_id": claim_id},
+    ).scalar_one()
+    for path in changed:
+        conn.execute(
+            text(
+                """
+                INSERT INTO claims.claim_amendment (
+                    claim_id, issue_id, field_path, old_value, new_value, source,
+                    conversation_id, claimant_text
+                )
+                VALUES (
+                    :claim_id, :issue_id, :field_path, CAST(:old_value AS jsonb),
+                    CAST(:new_value AS jsonb), 'provider', :conversation_id, :claimant_text
+                )
+                """
+            ),
+            {
+                "claim_id": claim_id,
+                "issue_id": issue_id,
+                "field_path": path,
+                "old_value": _dumps(before.get(path)),
+                "new_value": _dumps(after.get(path)),
+                "conversation_id": f"{submitter_id}:correction",
+                "claimant_text": "Corrected from the claim page",
+            },
+        )
+    conn.execute(
+        text(
+            """
+            UPDATE claims.claim_issue
+            SET status = 'resolved', resolved_at = now()
+            WHERE claim_id = :claim_id AND status = 'open'
+            """
+        ),
+        {"claim_id": claim_id},
+    )
+    conn.execute(
+        text("UPDATE claims.claim SET draft = CAST(:draft AS jsonb) WHERE claim_id = :claim_id"),
+        {"draft": updated.model_dump_json(), "claim_id": claim_id},
+    )
+    _finish_revalidation(conn, claim, updated, outcome)
+    return {
+        "claim_id": claim_id,
+        "claim_status": outcome.status,
+        "issues": [issue.message for issue in outcome.issues if issue.severity != "FLAG"],
+    }
+
+
 def _finish_revalidation(conn: Connection, claim: dict, draft: ClaimDraft, outcome: Outcome) -> None:
     claim_id = claim["claim_id"]
     now = _utc_now()

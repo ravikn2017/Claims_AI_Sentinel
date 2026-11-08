@@ -1,12 +1,132 @@
 .page {
   display: grid;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   gap: 16px;
 }
 
-.list {
-  margin: 0;
-  padding: 16px 16px 16px 32px;
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 20px;
   border: 1px solid var(--mui-palette-divider);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--mui-palette-background-paper);
+}
+
+.ring {
+  display: grid;
+  place-items: center;
+  width: 148px;
+  height: 148px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--mui-palette-error-main);
+}
+
+.ring0 {
+  background: var(--mui-palette-error-main);
+}
+
+.ring5 {
+  background: var(--mui-palette-success-main);
+}
+
+.ring4 {
+  background: conic-gradient(var(--mui-palette-success-main) 0 80%, var(--mui-palette-error-main) 0);
+}
+
+.ring3 {
+  background: conic-gradient(var(--mui-palette-success-main) 0 60%, var(--mui-palette-error-main) 0);
+}
+
+.ring2 {
+  background: conic-gradient(var(--mui-palette-success-main) 0 40%, var(--mui-palette-error-main) 0);
+}
+
+.ring1 {
+  background: conic-gradient(var(--mui-palette-success-main) 0 20%, var(--mui-palette-error-main) 0);
+}
+
+.hole {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  background: var(--mui-palette-background-paper);
+  text-align: center;
+}
+
+.summaryText {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.deps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.panel {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 12px;
+  background: var(--mui-palette-background-paper);
+}
+
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.barLabel {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 0.875rem;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 12px;
+  background: var(--mui-palette-background-paper);
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 700px) {
+  .header,
+  .summary {
+    flex-direction: column;
+  }
 }

@@ -10,6 +10,7 @@ data/documents/*
 !data/documents/.gitkeep
 data/inbox/*
 !data/inbox/.gitkeep
+models/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

@@ -1,15 +1,17 @@
 import AssignmentOutlined from "@mui/icons-material/AssignmentOutlined";
+import CheckOutlined from "@mui/icons-material/CheckOutlined";
 import ChatOutlined from "@mui/icons-material/ChatOutlined";
 import FactCheckOutlined from "@mui/icons-material/FactCheckOutlined";
 import InboxOutlined from "@mui/icons-material/InboxOutlined";
 import LibraryBooksOutlined from "@mui/icons-material/LibraryBooksOutlined";
 import MenuBookOutlined from "@mui/icons-material/MenuBookOutlined";
 import NoteAddOutlined from "@mui/icons-material/NoteAddOutlined";
+import QueryStatsOutlined from "@mui/icons-material/QueryStatsOutlined";
 import ReportProblemOutlined from "@mui/icons-material/ReportProblemOutlined";
 import SearchOutlined from "@mui/icons-material/SearchOutlined";
 import Typography from "@mui/material/Typography";
 import { Link as RouterLink } from "react-router-dom";
-import { staffRoles, useSession, type Role } from "../../session";
+import { roleLabel, staffRoles, useSession, type Role } from "../../session";
 import styles from "./HomePage.module.css";
 
 const cards: { to: string; title: string; detail: string; icon: typeof NoteAddOutlined; roles: Role[] }[] = [
@@ -56,6 +58,13 @@ const cards: { to: string; title: string; detail: string; icon: typeof NoteAddOu
     roles: ["ops"],
   },
   {
+    to: "/ops/fraud-model",
+    title: "Fraud model",
+    detail: "Train the claim-risk model and compare precision, recall, and F1.",
+    icon: QueryStatsOutlined,
+    roles: ["ops"],
+  },
+  {
     to: "/ops/failures",
     title: "Intake failures",
     detail: "Replay or discard submissions that did not make it into a claim.",
@@ -78,25 +87,75 @@ const cards: { to: string; title: string; detail: string; icon: typeof NoteAddOu
   },
 ];
 
+const briefs: Record<Role, { summary: string; can: string[] }> = {
+  provider: {
+    summary: "You file professional claims for your practice and follow the ones you submitted.",
+    can: [
+      "Submit a professional claim and attach a record",
+      "Open your submissions and see where each one stands",
+    ],
+  },
+  member: {
+    summary: "You are the person the claim is for. You can file a claim and ask about your plan. Asking does not change a decision.",
+    can: [
+      "Submit a claim",
+      "Follow your own submissions",
+      "Ask about your claims, your plan, or a provider",
+    ],
+  },
+  reviewer: {
+    summary: "You decide claims the adjudicator paused for a person. You do not file new claims.",
+    can: [
+      "See every submission and look one up by id",
+      "Pick up a review from the queue",
+      "Approve or deny the claim, and ask why the fraud check scored it",
+    ],
+  },
+  investigator: {
+    summary: "You examine claims the fraud check flagged. You confirm the concern or clear it. You do not file new claims.",
+    can: [
+      "See every submission and look one up by id",
+      "Pick up an investigation from the queue",
+      "Confirm or clear the claim, and ask the fraud assistant about the evidence",
+    ],
+  },
+  ops: {
+    summary: "You keep the platform running. You can see every claim, repair intake, and check whether each service is up.",
+    can: [
+      "Submit a claim or open any submission",
+      "Index coverage and medical policy for retrieval",
+      "Train the fraud model and compare precision, recall, and F1",
+      "Replay or discard intake failures",
+      "Read the audit trail and look up reference codes and plans",
+      "Check service health from the top bar",
+    ],
+  },
+};
+
 export function HomePage() {
   const { user } = useSession();
   if (!user) {
     return null;
   }
   const visible = cards.filter((card) => card.roles.includes(user.role));
+  const brief = briefs[user.role];
   return (
     <section className={styles.page}>
-      <div>
-        <Typography variant="overline" color="text.secondary">
-          {user.role}
-        </Typography>
-        <Typography variant="h4" component="h1">
-          Hello, {user.displayName}
-        </Typography>
-        <Typography color="text.secondary">
-          Choose where to go. Submit a claim or open the list, then use Back to return.
-        </Typography>
-      </div>
+      <header className={styles.hero}>
+        <p className={styles.kicker}>{roleLabel(user.role)}</p>
+        <h1 className={styles.title}>Hello, {user.displayName}</h1>
+        <p className={styles.summary}>{brief.summary}</p>
+        <ul className={styles.can}>
+          {brief.can.map((item) => (
+            <li key={item}>
+              <CheckOutlined className={styles.check} />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </header>
+      <div className={styles.section}>
+        <p className={styles.sectionLabel}>Where to go</p>
       <div className={styles.grid}>
         {visible.map((card) => (
           <RouterLink key={card.to} to={card.to} className={styles.card}>
@@ -111,6 +170,7 @@ export function HomePage() {
             </Typography>
           </RouterLink>
         ))}
+      </div>
       </div>
     </section>
   );

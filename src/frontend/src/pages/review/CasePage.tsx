@@ -238,7 +238,8 @@ export function CasePage() {
   if (!task) {
     return <Typography>Loading task…</Typography>;
   }
-  const mine = task.assignee === actor.id && task.status === "IN_REVIEW";
+  const canAct = (task.task_type === "REVIEW" && actor.role === "reviewer") || (task.task_type === "INVESTIGATION" && actor.role === "investigator");
+  const mine = canAct && task.assignee === actor.id && task.status === "IN_REVIEW";
 
   return (
     <section className={styles.page}>
@@ -273,10 +274,13 @@ export function CasePage() {
           <pre className={styles.summary}>{memo}</pre>
         </>
       )}
-      {task.status === "OPEN" && (
+      {!canAct && (
+        <Alert severity="info">{task.task_type === "INVESTIGATION" ? "Under investigation" : "Under review"}</Alert>
+      )}
+      {canAct && task.status === "OPEN" && (
         <Button variant="contained" onClick={() => void pickUp()} disabled={busy}>Pick up</Button>
       )}
-      {mine && ((task.task_type === "REVIEW" && actor.role === "reviewer") || (task.task_type === "INVESTIGATION" && actor.role === "investigator")) && (
+      {mine && (
         <form className={styles.form} onSubmit={(event) => void submit(event)}>
           {task.task_type === "INVESTIGATION" ? (
             <TextField select label="Outcome" value={outcome} onChange={(event) => setOutcome(event.target.value)}>

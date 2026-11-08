@@ -23,6 +23,24 @@
   vertical-align: top;
 }
 
+.identity {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.identity a,
+.waiting {
+  flex: none;
+  white-space: nowrap;
+}
+
+.waiting {
+  color: var(--mui-palette-text-secondary);
+  padding-top: 6px;
+}
+
 .id {
   font-family: ui-monospace, monospace;
   font-size: 13px;

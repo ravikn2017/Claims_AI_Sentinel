@@ -19,6 +19,7 @@ import MenuOutlined from "@mui/icons-material/MenuOutlined";
 import MenuOpenOutlined from "@mui/icons-material/MenuOpenOutlined";
 import MonitorHeartOutlined from "@mui/icons-material/MonitorHeartOutlined";
 import NoteAddOutlined from "@mui/icons-material/NoteAddOutlined";
+import QueryStatsOutlined from "@mui/icons-material/QueryStatsOutlined";
 import ReportProblemOutlined from "@mui/icons-material/ReportProblemOutlined";
 import SearchOutlined from "@mui/icons-material/SearchOutlined";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
@@ -33,13 +34,14 @@ import { InquiryPage } from "./pages/inquiry/InquiryPage";
 import { AuditPage } from "./pages/ops/AuditPage";
 import { FailuresPage } from "./pages/ops/FailuresPage";
 import { HealthPage } from "./pages/ops/HealthPage";
+import { FraudModelPage } from "./pages/ops/FraudModelPage";
 import { KnowledgePage } from "./pages/ops/KnowledgePage";
 import { ReferencePage } from "./pages/ops/ReferencePage";
 import { CasePage } from "./pages/review/CasePage";
 import { QueuePage } from "./pages/review/QueuePage";
 import { StatusPage } from "./pages/status/StatusPage";
 import { SubmitPage } from "./pages/submit/SubmitPage";
-import { homeFor, staffRoles, useSession, type Role, type User } from "./session";
+import { homeFor, roleLabel, staffRoles, useSession, type Role, type User } from "./session";
 
 const everyone: Role[] = ["provider", "member", "reviewer", "investigator", "ops"];
 
@@ -51,6 +53,7 @@ const links: { to: string; label: string; icon: typeof HomeOutlined; roles: Role
   { to: "/claims/lookup", label: "Look up", icon: SearchOutlined, roles: staffRoles },
   { to: "/review", label: "Queue", icon: InboxOutlined, roles: ["reviewer", "investigator"], end: true },
   { to: "/ops/knowledge", label: "Knowledge", icon: MenuBookOutlined, roles: ["ops"] },
+  { to: "/ops/fraud-model", label: "Fraud model", icon: QueryStatsOutlined, roles: ["ops"] },
   { to: "/ops/failures", label: "Intake failures", icon: ReportProblemOutlined, roles: ["ops"] },
   { to: "/ops/audit", label: "Audit", icon: FactCheckOutlined, roles: ["ops"] },
   { to: "/ops/reference", label: "Reference data", icon: LibraryBooksOutlined, roles: ["ops"] },
@@ -87,7 +90,7 @@ function ProfileButton({ user, onSignOut }: { user: User; onSignOut: () => void 
         <div className={styles.profile}>
           <Typography variant="subtitle1">{user.displayName}</Typography>
           <Typography variant="body2" color="text.secondary">{user.email}</Typography>
-          <Typography variant="body2"><span className={styles.profileLabel}>Role</span> {user.role}</Typography>
+          <Typography variant="body2"><span className={styles.profileLabel}>Role</span> {roleLabel(user.role)}</Typography>
           <Typography variant="body2"><span className={styles.profileLabel}>User</span> {user.userId}</Typography>
           {submitter && <Typography variant="body2"><span className={styles.profileLabel}>Submitter</span> {submitter}</Typography>}
           <Button className={styles.signOut} color="inherit" onClick={onSignOut}>
@@ -129,7 +132,7 @@ function Shell() {
                 ClaimsAI Sentinel
               </Typography>
               <Typography variant="caption" component="p" className={styles.tagline}>
-                {user.displayName} · {user.role}
+                {user.displayName} · {roleLabel(user.role)}
               </Typography>
             </div>
           </div>
@@ -185,6 +188,7 @@ function Shell() {
             <Route path="/review" element={<QueuePage />} />
             <Route path="/review/:taskId" element={<CasePage />} />
             <Route path="/ops/knowledge" element={<KnowledgePage />} />
+            <Route path="/ops/fraud-model" element={<FraudModelPage />} />
             <Route path="/ops/failures" element={<FailuresPage />} />
             <Route path="/ops/audit" element={<AuditPage />} />
             <Route path="/ops/reference" element={<ReferencePage />} />

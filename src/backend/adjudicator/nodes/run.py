@@ -21,9 +21,11 @@ from policy_compliance.graph.graph_builder import run_policy
 from adjudicator.standin import result_for, scripted_result
 from adjudicator.tasks import ensure_task, mark_done
 from adjudicator.tools import payer
+from adjudicator.tools.fraud import score_claim
 
 VERSIONS = {"source": "stand-in"}
 POLICY_VERSIONS = {"source": "policy_compliance"}
+FRAUD_VERSIONS = {"source": "fraud_detection"}
 
 
 def _ids(state: dict) -> tuple[str, int, str]:
@@ -121,7 +123,25 @@ def policy_check(state: dict) -> dict:
 
 
 def fraud_check(state: dict) -> dict:
-    return _agent(state, "fraud_detection", "fraud_result")
+    claim_id, attempt, correlation_id = _ids(state)
+    scripted = scripted_result(claim_id, "fraud_detection")
+    if scripted is not None:
+        result = scripted
+        versions = VERSIONS
+    else:
+        result = score_claim(state.get("claim") or {}, claim_id, correlation_id)
+        version = (result.get("details") or {}).get("model_version")
+        versions = {**FRAUD_VERSIONS, "model_version": version} if version else FRAUD_VERSIONS
+    record_event(
+        claim_id,
+        attempt,
+        correlation_id,
+        "AGENT_RESULT",
+        result,
+        once=True,
+        versions=versions,
+    )
+    return {"fraud_result": result}
 
 
 def route_node(state: dict) -> dict:

@@ -155,6 +155,39 @@ def test_redelivery_creates_one_claim_and_three_outcomes():
     assert ready == "1"
 
 
+def test_revise_claim_rechecks_the_whole_draft():
+    submission_id = _submit("pending.json", suffix=f"revise-{uuid4().hex[:6]}")
+    claim_id = _process(submission_id)
+    with payer_engine().begin() as conn:
+        draft = conn.execute(
+            text("SELECT draft FROM claims.claim WHERE claim_id = :claim_id"),
+            {"claim_id": claim_id},
+        ).scalar_one()
+        if isinstance(draft, str):
+            draft = json.loads(draft)
+        from contracts.models import ClaimDraft
+        from payer_service.app.errors import FieldRejected
+        from payer_service.app.repository import revise_claim
+
+        unchanged = ClaimDraft.model_validate(draft)
+        with pytest.raises(FieldRejected):
+            revise_claim(conn, claim_id, unchanged, "PRV-0042", today=TODAY)
+        draft["lines"][1]["cpt_code"] = "83036"
+        result = revise_claim(conn, claim_id, ClaimDraft.model_validate(draft), "PRV-0042", today=TODAY)
+    assert result["claim_status"] == "VALIDATED", result
+    with payer_engine().connect() as conn:
+        status = conn.execute(
+            text("SELECT status FROM claims.claim WHERE claim_id = :claim_id"),
+            {"claim_id": claim_id},
+        ).scalar_one()
+        open_issues = conn.execute(
+            text("SELECT count(*) FROM claims.claim_issue WHERE claim_id = :claim_id AND status = 'open'"),
+            {"claim_id": claim_id},
+        ).scalar_one()
+    assert status == "VALIDATED"
+    assert open_issues == 0
+
+
 def test_answer_revalidates_and_a_second_answer_is_rejected():
     submission_id = _submit("pending.json", suffix=f"answer-{uuid4().hex[:6]}")
     claim_id = _process(submission_id)

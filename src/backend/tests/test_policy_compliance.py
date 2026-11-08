@@ -9,7 +9,7 @@ from policy_compliance.graph.graph_builder import run_policy
 from policy_compliance.nodes.decide import rollup
 from policy_compliance.nodes.propose import LineProposal
 from adjudicator.service import start_run
-from adjudicator.standin import clear_stand_in
+from adjudicator.standin import clear_stand_in, set_stand_in
 from adjudicator.tools import documents, payer
 
 
@@ -228,6 +228,11 @@ def test_bad_citation_does_not_deny(monkeypatch):
     monkeypatch.setattr(payer, "get_plan_benefit", lambda plan, cpt, correlation: _row(plan, cpt, False, False, "§5.3"))
     monkeypatch.setattr(documents, "search_policy_documents", search)
     monkeypatch.setattr("policy_compliance.nodes.propose.propose_line", propose)
+    set_stand_in(
+        claim_id,
+        "fraud_detection",
+        {"verdict": "CLEAR", "confidence": 0.95, "reasons": ["clear"], "evidence": [], "error": None, "details": {}},
+    )
     start_run(claim_id, 1, "sub", "corr")
     assert "PENDING_REVIEW" in transitions
     assert "DENIED" not in transitions

@@ -14,3 +14,6 @@ langgraph-checkpoint-postgres
 langchain-openai
 langfuse
 pgvector
+scikit-learn
+xgboost
+

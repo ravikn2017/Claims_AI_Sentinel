@@ -124,6 +124,18 @@ export function useActor() {
   return { actor: user.actor };
 }
 
+const roleLabels: Record<Role, string> = {
+  provider: "Provider",
+  member: "Member",
+  reviewer: "Reviewer",
+  investigator: "Investigator",
+  ops: "Platform lead",
+};
+
+export function roleLabel(role: Role) {
+  return roleLabels[role];
+}
+
 export function homeFor(_role: Role) {
   return "/";
 }

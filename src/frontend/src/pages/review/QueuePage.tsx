@@ -128,6 +128,14 @@ function chipColor(value: unknown): "success" | "warning" | "error" | "default" 
   return "default";
 }
 
+function canOpen(role: string, taskType: string) {
+  return (role === "reviewer" && taskType === "REVIEW") || (role === "investigator" && taskType === "INVESTIGATION");
+}
+
+function waitingLabel(taskType: string) {
+  return taskType === "INVESTIGATION" ? "Under investigation" : "Under review";
+}
+
 function Verdict({ value }: { value: unknown }) {
   const label = phrase(value);
   if (!label) {
@@ -201,7 +209,6 @@ export function QueuePage() {
                 <TableCell>Medical</TableCell>
                 <TableCell>Recommendation</TableCell>
                 <TableCell>Risk</TableCell>
-                <TableCell />
               </TableRow>
             </TableHead>
             <TableBody>
@@ -213,9 +220,18 @@ export function QueuePage() {
                 return (
                   <TableRow key={task.task_id} hover>
                     <TableCell>
-                      <Typography className={styles.id} component="div">{task.claim_id}</Typography>
-                      <Typography variant="caption" color="text.secondary">Waiting since {when(task.created_at)}</Typography>
-                      {reason && <Typography className={styles.why} variant="caption" color="text.secondary">{reason}</Typography>}
+                      <div className={styles.identity}>
+                        <div>
+                          <Typography className={styles.id} component="div">{task.claim_id}</Typography>
+                          <Typography variant="caption" color="text.secondary">Waiting since {when(task.created_at)}</Typography>
+                          {reason && <Typography className={styles.why} variant="caption" color="text.secondary">{reason}</Typography>}
+                        </div>
+                        {canOpen(actor.role, task.task_type) ? (
+                          <Button component={RouterLink} to={`/review/${task.task_id}`} variant="contained" size="small">Open</Button>
+                        ) : (
+                          <Typography className={styles.waiting} variant="caption">{waitingLabel(task.task_type)}</Typography>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Typography component="div">{member}</Typography>
@@ -231,9 +247,6 @@ export function QueuePage() {
                     <TableCell><Verdict value={resultOf(summary, "med_result")?.verdict} /></TableCell>
                     <TableCell><Verdict value={summary?.recommendation} /></TableCell>
                     <TableCell className={styles.nowrap}>{task.risk_score ?? "—"}</TableCell>
-                    <TableCell>
-                      <Button component={RouterLink} to={`/review/${task.task_id}`} variant="contained" size="small">Open</Button>
-                    </TableCell>
                   </TableRow>
                 );
               })}

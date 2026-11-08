@@ -145,6 +145,8 @@ def test_join_table():
     assert join_route(_state(_result("NOT_COVERED"), clear)) == "return"
     assert join_route(_state(_result("NEEDS_INFO"), clear)) == "return"
     assert join_route(_state(covered, _result("FLAGGED"))) == "investigation"
+    assert join_route(_state(_result("NEEDS_INFO", 0.5), _result("FLAGGED", 0.86))) == "investigation"
+    assert join_route(_state(covered, _result("FLAGGED", 0.6))) == "review"
     assert join_route(_state(_result("COVERED", 0.6), clear)) == "review"
     assert join_route(_state(_result("COVERED", error="lookup failed"), clear)) == "review"
     assert investigation_route(_state(covered, clear, investigation={"outcome": "CONFIRMED"})) == "review"
@@ -160,9 +162,14 @@ def _script_policy_covered(claim_id: str) -> None:
     set_stand_in(claim_id, "policy_compliance", _result("COVERED"))
 
 
+def _script_fraud_clear(claim_id: str) -> None:
+    set_stand_in(claim_id, "fraud_detection", _result("CLEAR"))
+
+
 def test_covered_clear_necessary_pauses_then_approves(recorder):
     claim_id = _begin(recorder)
     _script_policy_covered(claim_id)
+    _script_fraud_clear(claim_id)
     handle_body(_ready(claim_id), "corr-1")
     assert "PENDING_REVIEW" in _targets(recorder)
     assert "DENIED" not in _targets(recorder)
@@ -184,6 +191,7 @@ def test_covered_clear_necessary_pauses_then_approves(recorder):
 def test_not_necessary_waits_for_the_reviewer(recorder):
     claim_id = _begin(recorder)
     _script_policy_covered(claim_id)
+    _script_fraud_clear(claim_id)
     set_stand_in(claim_id, "medical_necessity", _result("NOT_NECESSARY", reasons=["The notes do not support the service."]))
     start_run(claim_id, 1, "sub", "corr")
     assert _tasks(claim_id)[0]["summary"]["recommendation"] == "deny"
@@ -202,6 +210,7 @@ def test_policy_needs_info_returns_issues(recorder):
         "message": "Provide the authorization number.",
     }
     set_stand_in(claim_id, "policy_compliance", _result("NEEDS_INFO", issues=[issue]))
+    _script_fraud_clear(claim_id)
     start_run(claim_id, 1, "sub", "corr")
     pending = [row for row in recorder.transitions if row["to_status"] == "PENDING_INFO"]
     assert pending[0]["issues"] == [issue]
@@ -213,6 +222,7 @@ def test_policy_needs_info_returns_issues(recorder):
 def test_not_covered_denies_without_review(recorder):
     claim_id = _begin(recorder)
     set_stand_in(claim_id, "policy_compliance", _result("NOT_COVERED", reasons=["Excluded by the plan."]))
+    _script_fraud_clear(claim_id)
     start_run(claim_id, 1, "sub", "corr")
     assert "DENIED" in _targets(recorder)
     assert _tasks(claim_id) == []
@@ -240,6 +250,7 @@ def test_flagged_claim_waits_for_investigation(recorder):
 def test_low_confidence_and_error_go_to_review(recorder):
     low = _begin(recorder)
     set_stand_in(low, "policy_compliance", _result("COVERED", confidence=0.6))
+    _script_fraud_clear(low)
     start_run(low, 1, "sub", "corr")
     assert "PENDING_REVIEW" in _targets(recorder)
     assert "DENIED" not in _targets(recorder)
@@ -248,6 +259,7 @@ def test_low_confidence_and_error_go_to_review(recorder):
     before = len(recorder.transitions)
     failed = _begin(recorder)
     set_stand_in(failed, "policy_compliance", _result("COVERED", error="lookup failed"))
+    _script_fraud_clear(failed)
     start_run(failed, 1, "sub", "corr")
     failed_rows = recorder.transitions[before:]
     assert "PENDING_REVIEW" in [row["to_status"] for row in failed_rows]
@@ -265,9 +277,40 @@ def test_schema_failure_asks_for_information(recorder):
     assert pending[0]["issues"][0]["issue_code"] == "AMOUNT_MISMATCH"
 
 
+def _scored(verdict: str, confidence: float) -> dict:
+    return {
+        "agent": "fraud_detection",
+        "verdict": verdict,
+        "confidence": confidence,
+        "reasons": [verdict],
+        "evidence": ["model test"],
+        "error": None,
+        "details": {"model_version": "test"},
+    }
+
+
+def test_scored_flag_waits_for_investigation(recorder, monkeypatch):
+    claim_id = _begin(recorder)
+    _script_policy_covered(claim_id)
+    monkeypatch.setattr("adjudicator.nodes.run.score_claim", lambda *_args: _scored("FLAGGED", 0.91))
+    start_run(claim_id, 1, "sub", "corr")
+    assert _tasks(claim_id)[0]["task_type"] == "INVESTIGATION"
+    assert "medical_necessity" not in _agents(claim_id)
+
+
+def test_scored_clear_continues_to_medical_necessity(recorder, monkeypatch):
+    claim_id = _begin(recorder)
+    _script_policy_covered(claim_id)
+    monkeypatch.setattr("adjudicator.nodes.run.score_claim", lambda *_args: _scored("CLEAR", 0.95))
+    start_run(claim_id, 1, "sub", "corr")
+    assert "medical_necessity" in _agents(claim_id)
+    assert not any(task["task_type"] == "INVESTIGATION" for task in _tasks(claim_id))
+
+
 def test_redelivery_does_not_start_a_second_run(recorder):
     claim_id = _begin(recorder)
     _script_policy_covered(claim_id)
+    _script_fraud_clear(claim_id)
     body = _ready(claim_id)
     handle_body(body, "corr")
     handle_body(body, "corr")
