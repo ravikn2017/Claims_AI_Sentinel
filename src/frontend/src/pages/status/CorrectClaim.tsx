@@ -30,7 +30,6 @@ type FormState = {
   service_from: string;
   service_to: string;
   diagnosis_codes: string;
-  total_billed: string;
   lines: Line[];
 };
 
@@ -73,7 +72,6 @@ function fromDraft(draft: Draft): FormState {
     service_from: textOf(draft.service_from).slice(0, 10),
     service_to: textOf(draft.service_to).slice(0, 10),
     diagnosis_codes: (draft.diagnosis_codes ?? []).join(", "),
-    total_billed: textOf(draft.total_billed),
     lines: (draft.lines ?? []).map((line) => ({
       line_no: line.line_no,
       cpt_code: line.cpt_code ?? "",
@@ -84,6 +82,11 @@ function fromDraft(draft: Draft): FormState {
       prior_auth_number: line.prior_auth_number ?? "",
     })),
   };
+}
+
+function money(value: string) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : 0;
 }
 
 function pointers(value: string) {
@@ -176,7 +179,7 @@ export function CorrectClaim({ submissionId }: { submissionId: string }) {
           diagnosis_pointers: pointers(line.diagnosis_pointers),
           prior_auth_number: line.prior_auth_number.trim() || null,
         })),
-        total_billed: form.total_billed,
+        total_billed: form.lines.reduce((sum, line) => sum + money(line.billed_amount), 0).toFixed(2),
       },
     };
     try {
@@ -210,7 +213,7 @@ export function CorrectClaim({ submissionId }: { submissionId: string }) {
     return error ? <Alert severity="error">{error}</Alert> : null;
   }
 
-  const lineSum = form.lines.reduce((sum, line) => sum + Number(line.billed_amount || 0), 0);
+  const lineSum = form.lines.reduce((sum, line) => sum + money(line.billed_amount), 0);
 
   return (
     <form className={styles.form} onSubmit={(event) => void save(event)}>
@@ -247,13 +250,7 @@ export function CorrectClaim({ submissionId }: { submissionId: string }) {
           </div>
         </fieldset>
       ))}
-      <TextField
-        label="Total billed"
-        value={form.total_billed}
-        onChange={(event) => setForm({ ...form, total_billed: event.target.value })}
-        helperText={`Line sum ${lineSum.toFixed(2)}`}
-        required
-      />
+      <Typography>Total billed {lineSum.toFixed(2)}</Typography>
       {error && <Alert severity="error">{error}</Alert>}
       {notice && <Alert severity={notice.startsWith("Saved. The claim passed") ? "success" : "info"}>{notice}</Alert>}
       <Button type="submit" variant="contained" disabled={busy}>{busy ? "Saving…" : "Save correction"}</Button>

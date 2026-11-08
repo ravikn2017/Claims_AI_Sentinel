@@ -605,9 +605,27 @@ def read_task(task_id: int, request: Request):
             ),
             {"task_id": task_id},
         ).mappings().first()
-    if row is None:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return _jsonable(dict(row))
+        if row is None:
+            raise HTTPException(status_code=404, detail="Task not found")
+        claim_status = conn.execute(
+            text("SELECT status FROM claims.claim WHERE claim_id = :claim_id"),
+            {"claim_id": row["claim_id"]},
+        ).scalar()
+        history = conn.execute(
+            text(
+                """
+                SELECT from_status, to_status, reason
+                FROM claims.claim_status_history
+                WHERE claim_id = :claim_id
+                ORDER BY changed_at, id
+                """
+            ),
+            {"claim_id": row["claim_id"]},
+        ).mappings()
+        body = _jsonable(dict(row))
+        body["claim_status"] = claim_status
+        body["history"] = [_jsonable(dict(item)) for item in history]
+    return body
 
 
 @router.post("/review-tasks/{task_id}/claim")
@@ -779,6 +797,31 @@ def _finish_task(task_id: int, request: Request, task_type: str, event_type: str
         ).mappings().first()
         if updated is None:
             raise HTTPException(status_code=403, detail="Only the assignee of an open task can decide")
+        if event_type == "INVESTIGATION_RESULT":
+            conn.execute(
+                text(
+                    """
+                    UPDATE adjudication.review_tasks
+                    SET summary = jsonb_set(
+                        COALESCE(summary, '{}'::jsonb),
+                        '{investigation}',
+                        CAST(:investigation AS jsonb),
+                        true
+                    )
+                    WHERE task_id = :task_id
+                    """
+                ),
+                {
+                    "task_id": task_id,
+                    "investigation": json.dumps(
+                        {
+                            "outcome": payload.get("outcome"),
+                            "notes": payload.get("notes") or "",
+                            "investigator": payload.get("investigator") or assignee,
+                        }
+                    ),
+                },
+            )
         _event(conn, updated["claim_id"], event_type, assignee, payload)
     return {
         "task_id": task_id,

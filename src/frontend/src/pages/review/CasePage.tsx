@@ -6,7 +6,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useParams } from "react-router-dom";
 import { errorText, request } from "../../api";
-import { ClaimStages, type AdjEvent } from "../../components/ClaimStages";
+import { ClaimStages, type AdjEvent, type HistoryRow } from "../../components/ClaimStages";
 import { useActor } from "../../session";
 import { FraudAssistant } from "./FraudAssistant";
 import styles from "./CasePage.module.css";
@@ -20,6 +20,8 @@ type Task = {
   task_type: string;
   assignee: string | null;
   picked_at: string | null;
+  claim_status?: string | null;
+  history?: HistoryRow[];
 };
 
 const leaseMs = 30 * 60 * 1000;
@@ -36,6 +38,8 @@ const words: Record<string, string> = {
   CLEARED: "Cleared",
   approve: "Approve",
   deny: "Deny",
+  APPROVED: "Approved",
+  DENIED: "Denied",
   review: "A person should decide",
 };
 
@@ -102,13 +106,31 @@ function Check({ title, result }: { title: string; result: AgentResult | null })
   );
 }
 
-function SummaryView({ summary }: { summary: Record<string, unknown> }) {
+function latestEvent(events: AdjEvent[], eventType: string) {
+  return [...events].reverse().find((event) => event.event_type === eventType);
+}
+
+function textOf(value: unknown) {
+  return value == null ? "" : String(value).trim();
+}
+
+function SummaryView({ summary, events }: { summary: Record<string, unknown>; events: AdjEvent[] }) {
   const policy = asResult(summary.policy_result);
   const fraud = asResult(summary.fraud_result);
   const medical = asResult(summary.med_result);
-  const investigation = asResult(summary.investigation);
-  const notes = investigation?.notes ? String(investigation.notes) : "";
-  const empty = !policy && !fraud && !medical && !investigation && summary.recommendation == null && summary.risk_score == null;
+  const recorded = asResult(summary.investigation);
+  const investigationEvent = latestEvent(events, "INVESTIGATION_RESULT");
+  const investigation = recorded || investigationEvent
+    ? {
+        outcome: recorded?.outcome ?? investigationEvent?.payload.outcome,
+        notes: textOf(recorded?.notes) || textOf(investigationEvent?.payload.notes),
+        actor: textOf(recorded && "investigator" in recorded ? recorded.investigator : investigationEvent?.payload.investigator) || investigationEvent?.actor || "",
+      }
+    : null;
+  const reviewEvent = latestEvent(events, "REVIEW_DECIDED");
+  const reviewNotes = textOf(reviewEvent?.payload.notes);
+  const reviewer = textOf(reviewEvent?.payload.reviewer) || reviewEvent?.actor || "";
+  const empty = !policy && !fraud && !medical && !investigation && !reviewEvent && summary.recommendation == null && summary.risk_score == null;
   if (empty) {
     return <Typography color="text.secondary">No summary recorded.</Typography>;
   }
@@ -129,11 +151,18 @@ function SummaryView({ summary }: { summary: Record<string, unknown> }) {
       <Check title="Policy check" result={policy} />
       <Check title="Fraud check" result={fraud} />
       <Check title="Medical necessity" result={medical} />
-      {investigation && (investigation.outcome != null || notes) && (
+      {investigation && (investigation.outcome != null || investigation.notes) && (
         <div className={styles.block}>
           <Typography sx={{ fontWeight: 700 }}>Investigation</Typography>
-          <Typography>{phrase(investigation.outcome) || "Waiting for an outcome"}</Typography>
-          {notes ? <Typography>{notes}</Typography> : null}
+          <Typography>{phrase(investigation.outcome) || "Waiting for an outcome"}{investigation.actor ? ` · ${investigation.actor}` : ""}</Typography>
+          <Typography>{investigation.notes || "No notes recorded"}</Typography>
+        </div>
+      )}
+      {reviewEvent && (
+        <div className={styles.block}>
+          <Typography sx={{ fontWeight: 700 }}>Review decision</Typography>
+          <Typography>{phrase(reviewEvent.payload.decision)}{reviewer ? ` · ${reviewer}` : ""}</Typography>
+          <Typography>{reviewNotes || "No notes recorded"}</Typography>
         </div>
       )}
     </div>
@@ -238,6 +267,17 @@ export function CasePage() {
   if (!task) {
     return <Typography>Loading task…</Typography>;
   }
+  const decided = [...events].reverse().find((event) => event.event_type === "DECIDED");
+  const decidedStatus = typeof decided?.payload.decision === "string" ? decided.payload.decision : "";
+  const claimStatus = task.claim_status || (decidedStatus === "APPROVED" || decidedStatus === "DENIED" ? decidedStatus : "PENDING_REVIEW");
+  const history = task.history && task.history.length > 0
+    ? task.history
+    : decidedStatus === "APPROVED" || decidedStatus === "DENIED"
+      ? [
+          { from_status: "IN_ADJUDICATION", to_status: "PENDING_REVIEW", reason: null },
+          { from_status: "PENDING_REVIEW", to_status: decidedStatus, reason: null },
+        ]
+      : [];
   const canAct = (task.task_type === "REVIEW" && actor.role === "reviewer") || (task.task_type === "INVESTIGATION" && actor.role === "investigator");
   const mine = canAct && task.assignee === actor.id && task.status === "IN_REVIEW";
 
@@ -257,9 +297,9 @@ export function CasePage() {
       <div className={styles.columns}>
         <div className={styles.summaryColumn}>
           <Typography variant="h6" component="h2">Summary</Typography>
-          <SummaryView summary={task.summary ?? {}} />
+          <SummaryView summary={task.summary ?? {}} events={events} />
         </div>
-        <ClaimStages status="PENDING_REVIEW" history={[]} events={events} staff />
+        <ClaimStages status={claimStatus} history={history} events={events} staff />
       </div>
       {assessment && (
         <>

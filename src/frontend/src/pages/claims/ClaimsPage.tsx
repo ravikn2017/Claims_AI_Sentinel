@@ -214,6 +214,7 @@ export function ClaimsPage() {
                 <TableHead>
                   <TableRow>
                     <TableCell>Submission</TableCell>
+                    {staff && <TableCell>Claim</TableCell>}
                     <TableCell>Status</TableCell>
                     <TableCell>Progress</TableCell>
                   </TableRow>
@@ -240,6 +241,7 @@ export function ClaimsPage() {
                           </Button>
                         </div>
                       </TableCell>
+                      {staff && <TableCell className={styles.id}>{row.claim_id ?? "—"}</TableCell>}
                       <TableCell><StatusChip status={row.claim_status} /></TableCell>
                       <TableCell><StageRail status={row.claim_status} hadPendingInfo={row.had_pending_info} /></TableCell>
                     </TableRow>
