@@ -94,10 +94,10 @@ def schema_issues(claim: dict) -> list[dict]:
 def join_route(state: dict) -> str:
     policy = state.get("policy_result") or {}
     fraud = state.get("fraud_result") or {}
+    if fraud.get("verdict") == "FLAGGED" and not uncertain(fraud):
+        return "investigation"
     if uncertain(policy) or uncertain(fraud):
         return "review"
-    if fraud.get("verdict") == "FLAGGED":
-        return "investigation"
     verdict = policy.get("verdict")
     if verdict == "COVERED":
         return "medical_necessity"

@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from contracts.models import ClaimDraft
 from payer_service.app.db import payer_engine
 from payer_service.app.errors import Conflict, FieldRejected, NotAllowed
 from payer_service.app.extract import read_pdf_text
@@ -18,11 +19,17 @@ from payer_service.app.repository import (
     read_member_claims,
     read_member_coverage,
     search_providers,
+    revise_claim,
     start_adjudication,
     submission_status,
 )
 
 router = APIRouter()
+
+
+class CorrectionBody(BaseModel):
+    claim: ClaimDraft
+    submitter_id: str = Field(min_length=1)
 
 
 class AnswerBody(BaseModel):
@@ -107,6 +114,19 @@ def post_answer(claim_id: str, issue_id: int, body: AnswerBody):
         raise HTTPException(status_code=403, detail=exc.message) from exc
     except Conflict as exc:
         raise HTTPException(status_code=409, detail={"status": exc.status}) from exc
+
+
+@router.post("/claims/{claim_id}/correction")
+def post_correction(claim_id: str, body: CorrectionBody):
+    try:
+        with payer_engine().begin() as conn:
+            return revise_claim(conn, claim_id, body.claim, body.submitter_id)
+    except FieldRejected as exc:
+        raise HTTPException(status_code=422, detail=exc.message) from exc
+    except NotAllowed as exc:
+        raise HTTPException(status_code=403, detail=exc.message) from exc
+    except Conflict as exc:
+        raise HTTPException(status_code=409, detail="Only a claim that needs information can be corrected") from exc
 
 
 @router.post("/claims/{claim_id}/adjudication-start")

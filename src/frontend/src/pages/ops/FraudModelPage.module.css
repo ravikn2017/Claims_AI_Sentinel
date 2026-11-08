@@ -1,0 +1,55 @@
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.card,
+.active {
+  padding: 12px;
+  border: 1px solid var(--mui-palette-divider);
+  border-radius: 8px;
+  background: var(--mui-palette-background-paper);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.card:disabled,
+.active:disabled {
+  cursor: wait;
+}
+
+.active {
+  border-color: var(--mui-palette-primary-main);
+}
+
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.matrix th,
+.matrix td {
+  border: 1px solid var(--mui-palette-divider);
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.matrix caption {
+  text-align: left;
+  margin-bottom: 6px;
+}

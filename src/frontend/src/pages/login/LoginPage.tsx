@@ -15,7 +15,7 @@ const demos: { email: string; role: string; detail: string }[] = [
   { email: "member@example.test", role: "Member", detail: "Jane Doe" },
   { email: "reviewer@example.test", role: "Reviewer", detail: "Review queue" },
   { email: "investigator@example.test", role: "Investigator", detail: "Investigation queue" },
-  { email: "ops@example.test", role: "Ops", detail: "Knowledge and audit" },
+  { email: "ops@example.test", role: "Platform lead", detail: "Knowledge, audit, and the fraud model" },
 ];
 
 export function LoginPage() {

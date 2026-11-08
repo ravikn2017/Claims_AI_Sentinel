@@ -122,7 +122,7 @@ function StageRail({ status, hadPendingInfo }: { status: string; hadPendingInfo:
         })}
       </div>
       <Typography variant="caption" component="p" className={styles.caption}>
-        {status === "PENDING_INFO" ? "Chat is here" : steps[active].label}
+        {status === "PENDING_INFO" ? "Update the claim here" : steps[active].label}
       </Typography>
     </div>
   );
@@ -214,6 +214,7 @@ export function ClaimsPage() {
                 <TableHead>
                   <TableRow>
                     <TableCell>Submission</TableCell>
+                    {staff && <TableCell>Claim</TableCell>}
                     <TableCell>Status</TableCell>
                     <TableCell>Progress</TableCell>
                   </TableRow>
@@ -236,10 +237,11 @@ export function ClaimsPage() {
                             variant={row.claim_status === "PENDING_INFO" ? "contained" : "outlined"}
                             size="small"
                           >
-                            {row.claim_status === "PENDING_INFO" || row.had_pending_info ? "Open chat" : "Open"}
+                            {row.claim_status === "PENDING_INFO" ? "Update claim" : row.had_pending_info ? "Open chat" : "Open"}
                           </Button>
                         </div>
                       </TableCell>
+                      {staff && <TableCell className={styles.id}>{row.claim_id ?? "—"}</TableCell>}
                       <TableCell><StatusChip status={row.claim_status} /></TableCell>
                       <TableCell><StageRail status={row.claim_status} hadPendingInfo={row.had_pending_info} /></TableCell>
                     </TableRow>

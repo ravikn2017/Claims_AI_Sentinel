@@ -31,7 +31,6 @@ type FormState = {
   service_from: string;
   service_to: string;
   diagnosis_codes: string;
-  total_billed: string;
   lines: Line[];
 };
 
@@ -48,7 +47,6 @@ const cleanClaim: FormState = {
   service_from: "2026-10-20",
   service_to: "2026-10-20",
   diagnosis_codes: "E11.9, I10",
-  total_billed: "230.00",
   lines: [
     { line_no: 1, cpt_code: "99214", units: 1, billed_amount: "185.00", service_date: "2026-10-20", diagnosis_pointers: "1, 2", prior_auth_number: "" },
     { line_no: 2, cpt_code: "83036", units: 1, billed_amount: "45.00", service_date: "2026-10-20", diagnosis_pointers: "1", prior_auth_number: "" },
@@ -67,6 +65,11 @@ const rejectedClaim: FormState = {
   lines: cleanClaim.lines.map((line) => ({ ...line, service_date: "2020-01-15" })),
 };
 
+function money(value: string) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
 function pointers(value: string) {
   return value
     .split(",")
@@ -79,11 +82,10 @@ export function SubmitPage() {
   const { actor } = useActor();
   const navigate = useNavigate();
   const [form, setForm] = useState(cleanClaim);
-  const [submissionId, setSubmissionId] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const lineSum = form.lines.reduce((sum, line) => sum + Number(line.billed_amount || 0), 0);
+  const lineSum = form.lines.reduce((sum, line) => sum + money(line.billed_amount), 0);
 
   function updateLine(index: number, patch: Partial<Line>) {
     setForm({
@@ -97,7 +99,7 @@ export function SubmitPage() {
     setBusy(true);
     setError(null);
     const payload = {
-      submission_id: submissionId.trim() || null,
+      submission_id: null,
       submitter_type: actor.role === "member" ? "member" : "provider",
       submitter_id: actor.id,
       claim: {
@@ -125,7 +127,7 @@ export function SubmitPage() {
           diagnosis_pointers: pointers(line.diagnosis_pointers),
           prior_auth_number: line.prior_auth_number.trim() || null,
         })),
-        total_billed: form.total_billed,
+        total_billed: lineSum.toFixed(2),
       },
     };
     try {
@@ -163,7 +165,6 @@ export function SubmitPage() {
         <Button type="button" variant="outlined" onClick={() => setForm(pendingClaim)}>Fixable example</Button>
         <Button type="button" variant="outlined" onClick={() => setForm(rejectedClaim)}>Rejected example</Button>
       </div>
-      <TextField label="Submission id" value={submissionId} onChange={(event) => setSubmissionId(event.target.value)} helperText="Leave blank to generate one" />
       <div className={styles.grid}>
         <TextField label="Member id" value={form.member_id} onChange={(event) => setForm({ ...form, member_id: event.target.value })} required />
         <TextField label="First name" value={form.first_name} onChange={(event) => setForm({ ...form, first_name: event.target.value })} required />
@@ -191,13 +192,7 @@ export function SubmitPage() {
           </div>
         </fieldset>
       ))}
-      <TextField
-        label="Total billed"
-        value={form.total_billed}
-        onChange={(event) => setForm({ ...form, total_billed: event.target.value })}
-        helperText={`Line sum ${lineSum.toFixed(2)}`}
-        required
-      />
+      <Typography>Total billed {lineSum.toFixed(2)}</Typography>
       <label className={styles.file}>
         PDF (optional)
         <input type="file" accept="application/pdf,.pdf" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />

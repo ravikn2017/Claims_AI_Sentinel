@@ -28,7 +28,7 @@ USERS = [
     ("MBR-100231", "member@example.test", "Jane Doe", "member", "user", "MBR-100231"),
     ("REV-01", "reviewer@example.test", "Alex Reviewer", "reviewer", "user", None),
     ("INV-01", "investigator@example.test", "Sam Investigator", "investigator", "user", None),
-    ("OPS-01", "ops@example.test", "Ops", "ops", "operator", None),
+    ("OPS-01", "ops@example.test", "Platform lead", "ops", "operator", None),
 ]
 
 MEMBERS = [
