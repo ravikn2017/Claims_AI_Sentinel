@@ -105,6 +105,36 @@ def get_plan_benefit(plan_code: str, cpt_code: str, correlation_id: str) -> dict
     raise AdjudicationError(status, _detail(body))
 
 
+def get_medical_records(claim_id: str, attempt: int, correlation_id: str) -> list[dict]:
+    """Text of every medical_record on the claim. The payer service writes the audit row."""
+    status, body = _request(
+        "GET",
+        f"/claims/{claim_id}/medical-records",
+        claim_id,
+        attempt,
+        correlation_id,
+        actor_id="adjudicator:medical_necessity",
+    )
+    if status == 200 and isinstance(body, list):
+        records = []
+        for row in body:
+            if not isinstance(row, dict):
+                continue
+            records.append(
+                {
+                    "document_id": str(row.get("document_id") or ""),
+                    "received_at": row.get("received_at"),
+                    "text": str(row.get("text") or ""),
+                }
+            )
+        return records
+    if status == 404:
+        raise AdjudicationError(404, "Claim not found")
+    if status >= 500:
+        raise AdjudicationError(503, "Payer service is unavailable")
+    raise AdjudicationError(status if status >= 400 else 502, _detail(body))
+
+
 def get_claim(claim_id: str, attempt: int, correlation_id: str) -> dict:
     status, body = _request("GET", f"/claims/{claim_id}", claim_id, attempt, correlation_id)
     if status == 200 and isinstance(body, dict):

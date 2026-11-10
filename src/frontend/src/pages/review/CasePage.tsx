@@ -50,6 +50,7 @@ type AgentResult = {
   error?: unknown;
   outcome?: unknown;
   notes?: unknown;
+  details?: { review_flags?: unknown };
 };
 
 function phrase(value: unknown) {
@@ -82,7 +83,15 @@ function confidenceOf(result: AgentResult | null) {
   return value <= 1 ? `${Math.round(value * 100)}% confidence` : `confidence ${value}`;
 }
 
-function Check({ title, result }: { title: string; result: AgentResult | null }) {
+function reviewFlags(result: AgentResult | null): string[] {
+  const flags = result?.details?.review_flags;
+  if (!Array.isArray(flags)) {
+    return [];
+  }
+  return flags.map((flag) => String(flag).trim()).filter(Boolean);
+}
+
+function Check({ title, result, notes }: { title: string; result: AgentResult | null; notes?: string[] }) {
   if (!result || (result.verdict == null && result.error == null)) {
     return null;
   }
@@ -99,6 +108,13 @@ function Check({ title, result }: { title: string; result: AgentResult | null })
         <ul className={styles.reasons}>
           {reasons.map((reason) => (
             <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+      )}
+      {notes && notes.length > 0 && (
+        <ul className={styles.reasons}>
+          {notes.map((note) => (
+            <li key={note}>{note}</li>
           ))}
         </ul>
       )}
@@ -150,7 +166,7 @@ function SummaryView({ summary, events }: { summary: Record<string, unknown>; ev
       )}
       <Check title="Policy check" result={policy} />
       <Check title="Fraud check" result={fraud} />
-      <Check title="Medical necessity" result={medical} />
+      <Check title="Medical necessity" result={medical} notes={reviewFlags(medical)} />
       {investigation && (investigation.outcome != null || investigation.notes) && (
         <div className={styles.block}>
           <Typography sx={{ fontWeight: 700 }}>Investigation</Typography>

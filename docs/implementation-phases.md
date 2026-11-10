@@ -21,7 +21,7 @@ Scope ends at `APPROVED` or `DENIED` plus `AdjudicationDecided`. Payment, member
 Postgres has one schema per owner: `portal`, `claims`, `adjudication`, `fraud`.
 The pgvector extension is enabled on the instance. Embeddings live in `adjudication.payer_doc_chunk`, shared by policy compliance (plan documents) and medical necessity (medical policies).
 
-Two blocks. Finish and check Block A before starting Block B.
+Three blocks. Finish and check Block A before starting Block B. Block C protects the services Block A and Block B already built. Its detail is `security-plan.md`. Do not start Block C by adding an identity provider, a service mesh, or a second database.
 
 ---
 
@@ -196,6 +196,46 @@ The golden path across both blocks.
 6. The portal shows the final status, and `AdjudicationDecided` has been emitted.
 
 **Done when:** that path works for a clean claim, a not-covered claim, a fraud-flagged claim, and a claim that needed more information.
+
+---
+
+## Block C — Service identity, guardrails, and abuse tests
+
+Local learning scope. The browser session stays as it is. Service calls stop trusting `X-Actor-*` headers. Agent proposals stay proposals until code checks them against a policy file. Detail, token claims, policy shape, the threat model, and the abuse cases are in `security-plan.md`.
+
+Block C can start once the portal, payer, chatbot, and adjudicator HTTP APIs exist. Include the fraud service on 47114 when that process is up. It does not wait on payment or letters.
+
+### Phase 15. Service JWT
+
+Protect the HTTP APIs on 47111, 47112, 47113, and 47114.
+
+1. A shared HMAC secret in `.env`. Each caller mints a short-lived JWT for one target service.
+2. The portal mints that token from the signed-in session. The adjudicator and chatbot mint their own when they call another service.
+3. The receiving service checks the signature, expiry, audience, and role. The actor written to the audit row comes from the token.
+4. `/health` stays open. The browser still talks only to the portal and never holds a service token.
+
+**Done when:** a call with no token, a token for the wrong service, or an expired token is rejected, and a normal portal submission still reaches `VALIDATED`.
+
+### Phase 16. Guardrails and policy as code
+
+Deterministic checks on tool arguments and status changes, read from checked-in policy files.
+
+1. Route rules: which role may call which path.
+2. Tool rules: which agent may call which function, and which id and claim the arguments must match.
+3. Transition rules: which role may request which status edge. The model cannot set `APPROVED` or `DENIED`.
+4. A proposal that fails a rule is dropped. The claim status does not change.
+
+**Done when:** the scripted cases in `security-plan.md` (wrong member, another claim id, a status the model invented, an id that is not an id) are rejected, and a valid chatbot answer still clears an open issue.
+
+### Phase 17. Threat model, abuse tests, and the control list
+
+Write down the trust boundaries and keep the abuse cases as tests.
+
+1. The short threat model in `security-plan.md` stays accurate for the four boundaries: browser, service HTTP, queue, and model proposal.
+2. The abuse cases from Phases 15 and 16 live in one test module.
+3. The control list maps each existing design rule (one writer, code decides, humans own adverse decisions, append-only audit) to the check that enforces it.
+
+**Done when:** the abuse tests pass, and a reader can see which control covers which boundary without a compliance product.
 
 ---
 

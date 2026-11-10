@@ -46,6 +46,29 @@
 }
 ```
 
+### Document index (same service, not a graph step)
+
+The adjudicator process also owns `adjudication.payer_doc_chunk`. Writing and reading that index is not a node in the claim flow in section 3. The orchestrator still only routes agent results. The embedding model proposes a vector; code keeps it only when the length is 768. The model is `EMBEDDING_MODEL`, default `text-embedding-3-small`.
+
+```mermaid
+%%{init: {"themeVariables": {"fontSize": "13px"}, "flowchart": {"nodeSpacing": 16, "rankSpacing": 28, "padding": 8}}}%%
+flowchart LR
+    index["Knowledge page<br/>index a document"] --> split["one chunk per section"]
+    split --> embedDocs["embed_texts<br/>768 dimensions"]
+    embedDocs --> store["payer_doc_chunk"]
+
+    policy["Policy agent"] --> search["search_policy_documents"]
+    knowledge["Knowledge search"] --> search
+    search --> embedQuery["embed_query"]
+    embedQuery --> rank["rank Evidence of Coverage<br/>for that plan"]
+    store --> rank
+
+    med["Medical necessity"] --> cpt["get_medical_policy<br/>by CPT code"]
+    store --> cpt
+```
+
+`embed_texts` lives in `adjudicator/index.py`. `embed_query` lives in `adjudicator/tools/documents.py`. `get_medical_policy` does not embed. Retrieval details stay in `policy-compliance-agent-design.md` and `medical-necessity-agent-design.md`.
+
 ---
 
 ## 3. Flow
@@ -193,7 +216,7 @@ The terminal states are `DECIDED`, `RETURNED_TO_CLAIMANT` (denied, or sent back 
 | Parallel fan-out     | Two edges from `load_claim` to `policy_check` and `fraud_check`, which both lead into `route`. LangGraph waits for both branches before running `route`.      |
 | Routing              | `add_conditional_edges("route", route_fn)`, where `route_fn` is a pure Python function implementing section 5                                                 |
 | Waiting for humans   | `interrupt()` inside the `investigation` and `human_review` nodes. The callback endpoints resume the graph with `Command(resume=payload)`.                    |
-| Persistence          | A `SqliteSaver` checkpointer, with `thread_id = f"{claim_id}:{adjudication_attempt}"` (section 5.1). This gives idempotency and restart safety for free.          |
+| Persistence          | A `PostgresSaver` checkpointer in the `adjudication` schema, with `thread_id = f"{claim_id}:{adjudication_attempt}"` (section 5.1). This gives idempotency and restart safety for free. |
 | Timeouts and retries | A `RetryPolicy(max_attempts=2)` on the agent nodes. If they still fail, the node writes `error` to the result, and routing sends the claim to human review.   |
 | Handoff              | The `decide` node emits `AdjudicationDecided`. For local use, this can be a simple write to a queue table or a log.                                           |
 
@@ -202,7 +225,7 @@ The terminal states are `DECIDED`, `RETURNED_TO_CLAIMANT` (denied, or sent back 
 ```python
 from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.postgres import PostgresSaver
 
 class AdjState(TypedDict, total=False):
     claim_id: str
@@ -245,7 +268,7 @@ g.add_edge("human_review", "decide")
 g.add_edge("decide", END)
 g.add_edge("return_to_claimant", END)
 
-graph = g.compile(checkpointer=SqliteSaver.from_conn_string("adjudicator.db"))
+graph = g.compile(checkpointer=PostgresSaver(conn))  # search_path adjudication
 ```
 
 ---
@@ -260,7 +283,7 @@ graph = g.compile(checkpointer=SqliteSaver.from_conn_string("adjudicator.db"))
 2. LangGraph saves the claim's state to the checkpointer, and the run returns immediately. The worker is free to process other claims.
 3. Later, the decision callback resumes that claim with `graph.invoke(Command(resume=decision), config={"thread_id": f"{claim_id}:{attempt}"})`, and the graph continues into `decide`.
 
-Each claim attempt is its own thread (`thread_id = claim_id:adjudication_attempt`), so any number of claims can sit paused at the same time. Paused claims are just saved checkpoints, with nothing held in memory. This is why the persistent `SqliteSaver` is needed once review is wired up.
+Each claim attempt is its own thread (`thread_id = claim_id:adjudication_attempt`), so any number of claims can sit paused at the same time. Paused claims are just saved checkpoints, with nothing held in memory. This is why the Postgres checkpointer in the `adjudication` schema is needed once review is wired up.
 
 Investigation uses the same interrupt-and-resume mechanism, with its own queue.
 

@@ -166,10 +166,15 @@ def _script_fraud_clear(claim_id: str) -> None:
     set_stand_in(claim_id, "fraud_detection", _result("CLEAR"))
 
 
+def _script_medical_necessary(claim_id: str) -> None:
+    set_stand_in(claim_id, "medical_necessity", _result("NECESSARY"))
+
+
 def test_covered_clear_necessary_pauses_then_approves(recorder):
     claim_id = _begin(recorder)
     _script_policy_covered(claim_id)
     _script_fraud_clear(claim_id)
+    _script_medical_necessary(claim_id)
     handle_body(_ready(claim_id), "corr-1")
     assert "PENDING_REVIEW" in _targets(recorder)
     assert "DENIED" not in _targets(recorder)
@@ -301,6 +306,7 @@ def test_scored_flag_waits_for_investigation(recorder, monkeypatch):
 def test_scored_clear_continues_to_medical_necessity(recorder, monkeypatch):
     claim_id = _begin(recorder)
     _script_policy_covered(claim_id)
+    _script_medical_necessary(claim_id)
     monkeypatch.setattr("adjudicator.nodes.run.score_claim", lambda *_args: _scored("CLEAR", 0.95))
     start_run(claim_id, 1, "sub", "corr")
     assert "medical_necessity" in _agents(claim_id)
@@ -311,6 +317,7 @@ def test_redelivery_does_not_start_a_second_run(recorder):
     claim_id = _begin(recorder)
     _script_policy_covered(claim_id)
     _script_fraud_clear(claim_id)
+    _script_medical_necessary(claim_id)
     body = _ready(claim_id)
     handle_body(body, "corr")
     handle_body(body, "corr")

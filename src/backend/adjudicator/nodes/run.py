@@ -17,8 +17,9 @@ from adjudicator.nodes.routing import (
     route_label,
     schema_issues,
 )
+from medical_necessity.graph.graph_builder import run_medical
 from policy_compliance.graph.graph_builder import run_policy
-from adjudicator.standin import result_for, scripted_result
+from adjudicator.standin import scripted_result
 from adjudicator.tasks import ensure_task, mark_done
 from adjudicator.tools import payer
 from adjudicator.tools.fraud import score_claim
@@ -26,43 +27,11 @@ from adjudicator.tools.fraud import score_claim
 VERSIONS = {"source": "stand-in"}
 POLICY_VERSIONS = {"source": "policy_compliance"}
 FRAUD_VERSIONS = {"source": "fraud_detection"}
+MEDICAL_VERSIONS = {"source": "medical_necessity"}
 
 
 def _ids(state: dict) -> tuple[str, int, str]:
     return state["claim_id"], int(state["attempt"]), state.get("correlation_id") or ""
-
-
-def _stand_in(state: dict, agent: str) -> dict:
-    last: Exception | None = None
-    for _attempt in range(2):
-        try:
-            return result_for(state["claim_id"], agent)
-        except Exception as exc:
-            last = exc
-    return {
-        "agent": agent,
-        "verdict": None,
-        "confidence": 0,
-        "reasons": [],
-        "evidence": [],
-        "error": str(last),
-        "details": {},
-    }
-
-
-def _agent(state: dict, agent: str, field: str) -> dict:
-    claim_id, attempt, correlation_id = _ids(state)
-    result = _stand_in(state, agent)
-    record_event(
-        claim_id,
-        attempt,
-        correlation_id,
-        "AGENT_RESULT",
-        result,
-        once=True,
-        versions=VERSIONS,
-    )
-    return {field: result}
 
 
 def load_claim(state: dict) -> dict:
@@ -201,8 +170,23 @@ def after_investigation(state: dict) -> str:
 
 def medical_necessity(state: dict) -> dict:
     claim_id, attempt, correlation_id = _ids(state)
-    result = _agent(state, "medical_necessity", "med_result")
-    updated = {**state, **result}
+    scripted = scripted_result(claim_id, "medical_necessity")
+    if scripted is not None:
+        result = scripted
+        versions = VERSIONS
+    else:
+        result = run_medical(state)
+        versions = MEDICAL_VERSIONS
+    record_event(
+        claim_id,
+        attempt,
+        correlation_id,
+        "AGENT_RESULT",
+        result,
+        once=True,
+        versions=versions,
+    )
+    updated = {**state, "med_result": result}
     step = medical_route(updated)
     record_event(
         claim_id,
@@ -211,7 +195,7 @@ def medical_necessity(state: dict) -> dict:
         "ROUTED",
         {"rule": route_label(updated, step), "next_step": step},
     )
-    return {**result, "next_step": step, "status": "MED_NECESSITY_RUNNING"}
+    return {"med_result": result, "next_step": step, "status": "MED_NECESSITY_RUNNING"}
 
 
 def after_medical(state: dict) -> str:
