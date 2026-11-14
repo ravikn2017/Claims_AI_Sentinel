@@ -9,7 +9,9 @@ from langchain_openai import ChatOpenAI
 
 def chat_model() -> ChatOpenAI:
     return ChatOpenAI(
-        model=os.environ.get("MEDICAL_MODEL", "gpt-4o-mini"),
+        model=os.environ.get("MEDICAL_MODEL", "gpt-6-luna"),
         temperature=0,
+        # Chat Completions tool calls on this model require reasoning off.
+        reasoning_effort="none",
         api_key=os.environ["OPENAI_API_KEY"],
     )

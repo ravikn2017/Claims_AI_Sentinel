@@ -24,29 +24,38 @@ Postgres is one local instance with pgvector. RabbitMQ carries claim events. Doc
 flowchart TD
     who["Provider or member<br/>portal, email/PDF drop, or partner API"] --> portal["Payer portal<br/>shape checks only"]
     portal -->|claim.submitted| mq[("RabbitMQ")]
-    mq --> payer["Payer service<br/>extract, validate, store"]
+    portal -.-> inquiry["Member inquiry<br/>AI agent, LLM<br/>does not change the claim"]
+    mq --> payer["Payer service<br/>validate and store<br/>no LLM"]
     payer <--> db[("claims schema<br/>sole writer of claim data")]
-    payer <-->|"missing info"| bot["Missing-info chatbot"]
+    payer <-->|"missing info"| bot["Missing-info chatbot<br/>AI agent, LLM"]
     payer -->|claim.ready_for_adjudication| load
 
-    subgraph adj["Claims adjudicator"]
-        load["Load claim"] --> pc["Policy compliance<br/>is it covered?"]
-        load --> fd["Fraud detection<br/>is it genuine?"]
-        pc --> join{"Join and route"}
+    index["Knowledge page<br/>index each section"] --> embed["Embeddings<br/>768 dimensions<br/>not a chat LLM"]
+    embed --> docs[("payer_doc_chunk")]
+
+    subgraph adj["Claims adjudicator<br/>routing is code, not an LLM"]
+        load["Load claim"] --> pc["Policy compliance<br/>AI agent, LLM<br/>for exclusions"]
+        load --> fd["Fraud detection<br/>AI agent<br/>classical model, not an LLM"]
+        pc --> join{"Join and route<br/>code"}
         fd --> join
-        join -->|"covered and clear"| mn["Medical necessity<br/>is it necessary?"]
-        join -->|flagged| inv["Investigation"]
+        join -->|"covered and clear"| mn["Medical necessity<br/>AI agent, LLM"]
+        join -->|flagged| inv["Investigation<br/>a person"]
         inv -->|cleared and covered| mn
         inv -->|confirmed| rev
-        mn --> rev["Human review"]
+        mn --> rev["Human review<br/>a person"]
         join -->|"error or low confidence"| rev
-        rev --> dec["Decide"]
+        rev --> dec["Decide<br/>code"]
     end
+
+    docs -.->|"embed the query"| pc
+    docs -.->|"lookup by CPT, no embedding"| mn
 
     join -->|"not covered or needs info"| ret["Back to claimant<br/>DENIED or PENDING_INFO"]
     mn -->|needs info| ret
     dec -->|"APPROVED or DENIED"| out["AdjudicationDecided<br/>payment and letters later"]
 ```
+
+The four AI agents are the missing-info chatbot, member inquiry, policy compliance, and medical necessity, plus fraud detection. The first four call a chat LLM. Fraud detection scores with a trained classical model, and its narrative is a template. The document index embeds text for storage and for policy search. It is not one of the agents, and the adjudicator graph does not call it as a step. Medical necessity reads the same table by procedure code.
 
 Every status change, including a return to the claimant, is requested from the payer service. The adjudicator does not update `claims.claim.status` itself.
 
@@ -100,9 +109,9 @@ Waiting later (for a claimant, an investigator, or a reviewer) is a Postgres che
 
 Policy compliance and fraud detection run at the same time on every claim that enters adjudication.
 
-**Policy compliance** asks whether each line is covered by the member's plan. Code checks the policy dates, network status, and `plan_benefit` rows. Retrieval over plan-document chunks in `adjudication.payer_doc_chunk` supplies exclusions and exceptions. The model may explain and cite. Code checks that citation against the benefit table before the verdict is kept.
+**Policy compliance** is an AI agent. Code checks the policy dates, network status, and `plan_benefit` rows first. When a line is not settled by that row, search embeds the query and ranks Evidence of Coverage chunks in `adjudication.payer_doc_chunk`. A chat LLM may then explain and cite. Code checks that citation against the benefit table before the verdict is kept.
 
-**Fraud detection** asks whether the claim looks genuine. Hard rules and the model score set the verdict. The model writes the narrative for a person to read. The assessment is stored in the `fraud` schema. The model does not set the verdict on its own.
+**Fraud detection** is an AI agent that does not call a chat LLM. A trained classical model produces a score, and hard rules plus that score set the verdict. The narrative is filled from those reasons. The assessment is stored in the `fraud` schema. The reviewer assistant reads that stored row and does not change the verdict.
 
 Both agents return one shape: `verdict`, `confidence`, `reasons`, `evidence`, `error`, plus their own `details`. Routing uses that shape and does not depend on how an agent works inside.
 
@@ -181,7 +190,7 @@ Every payer read of claim data writes `claims.audit_event` in the same transacti
 | Missing-info chatbot | Ask about open issues | Phrase the question | Whether the answer is valid |
 | Adjudicator | Order the checks and wait for people | Nothing | Parallelism, join rules, pauses, the final request to change status |
 | Policy compliance | Is the line covered? | Explain and cite plan text | Benefit table, policy dates, network, citation check |
-| Fraud detection | Does the claim look genuine? | Write the narrative and answer reviewer questions | Score plus hard rules |
+| Fraud detection | Does the claim look genuine? | A classical score. The narrative is a template, and the assistant reads the stored row | Score plus hard rules |
 | Medical necessity | Do the notes meet the policy? | Judge each criterion and quote the note | Quote check, line verdict, provider flag |
 | Human review | Approve or deny from one summary | — | Queue, pickup lock, only the assignee decides |
 
